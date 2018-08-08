@@ -1,0 +1,129 @@
+<?php
+
+/**
+ * @file
+ * Primary module hooks for SEO pager module.
+ */
+
+use Drupal\Core\Url;
+use Drupal\views\ViewExecutable;
+
+/**
+ * Implements hook_preprocess_pager() for pager.html.twig.
+ *
+ * Fix Url's to correct one. There is bug that some links have incorrect route,
+ * which not pass to path processors.
+ */
+function seo_pager_preprocess_pager(array &$variables) {
+  // Sometimes on views pages can show warning about invalid argument.
+  if (!empty($variables['items'])) {
+    foreach ($variables['items'] as $type => $items) {
+      if ($type == 'pages') {
+        foreach ($items as $key => $item) {
+          if (isset($item['href'])) {
+            $variables['items'][$type][$key]['href'] = _seo_pager_clean_pager_url($item['href']);
+          }
+        }
+      }
+      else {
+        if (isset($items['href'])) {
+          $variables['items'][$type]['href'] = _seo_pager_clean_pager_url($items['href']);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Clean pager URL't to support outbound processing.
+ */
+function _seo_pager_clean_pager_url($url) {
+  // If no query args.
+  if (strpos($url, '?') !== 0) {
+    return $url;
+  }
+  parse_str(substr($url, 1), $query);
+
+  /** @var \Symfony\Component\HttpFoundation\RequestStack $request */
+  $request = \Drupal::request();
+  // This is fix for default Views exposed filters and sorts. Clean them from
+  // Url if they are not changed from defaults.
+  foreach ($query as $key => $value) {
+    if (!$request->query->has($key) && $key != 'page') {
+      unset($query[$key]);
+    }
+  }
+
+  return Url::fromRoute('<current>', [], ['query' => $query]);
+}
+
+/**
+ * Implements hook_views_pre_render().
+ *
+ * This hook used over other, more specified such as hook_preprocess_html(),
+ * because in RouteMatch parameters can be wrong info about views. E.g. using
+ * TVI module, there be always default view taxonomy_term/page_1 instead of
+ * actual that renders.
+ */
+function seo_pager_views_pre_render(ViewExecutable $view) {
+  $request = \Drupal::request();
+  $view_display = $view->getDisplay();
+  $view_extenders = $view_display->getExtenders();
+
+  if (isset($view_extenders['seo_pager_display_extender'])) {
+    /** @var \Drupal\seo_pager\Plugin\views\display_extender\SeoPagerDisplayExtender $seo_pager_extender */
+    $seo_pager_extender = $view_extenders['seo_pager_display_extender'];
+
+    if ($seo_pager_extender->isEnabled()) {
+      /** @var \Drupal\views\Plugin\views\pager\Full $view_pager */
+      $view_pager = $view->getPager();
+
+      $total_items = $view_pager->getTotalItems();
+      $items_per_page = $view_pager->getItemsPerPage();
+      // There will be current page without our offset.
+      $current_page = $view_pager->getCurrentPage();
+
+      $need_prev = $current_page > 0 ? TRUE : FALSE;
+      $need_next = floor($total_items / $items_per_page) - 1 > $current_page ? TRUE : FALSE;
+      $seo_pager_link_options = [
+        'absolute' => TRUE,
+        'query' => $request->query->all(),
+      ];
+
+      if ($need_prev) {
+        $seo_pager_link_options['query']['page'] = $current_page - 1;
+        $seo_pager_prev = [
+          '#tag' => 'link',
+          '#attributes' => [
+            'href' => Url::fromRoute('<current>', [], $seo_pager_link_options)
+              ->toString(),
+            'rel' => 'prev',
+          ],
+        ];
+
+        $view->element['#attached']['html_head'][] = [
+          $seo_pager_prev,
+          'seo_pager_prev',
+        ];
+      }
+
+      if ($need_next) {
+        $seo_pager_link_options['query']['page'] = $current_page + 1;
+        $seo_pager_next = [
+          '#tag' => 'link',
+          '#attributes' => [
+            'href' => Url::fromRoute('<current>', [], $seo_pager_link_options)
+              ->toString(),
+            'rel' => 'next',
+          ],
+        ];
+
+        $view->element['#attached']['html_head'][] = [
+          $seo_pager_next,
+          'seo_pager_next',
+        ];
+      }
+    }
+  }
+
+}

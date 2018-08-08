@@ -1,0 +1,5 @@
+name: SEO pager
+type: module
+description: SEO pagers improvements.
+package: SEO
+core: 8.x
