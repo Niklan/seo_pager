@@ -1,5 +1,5 @@
 services:
-  dummy.page_path_processor:
+  seo_pager.page_path_processor:
     class: Drupal\seo_pager\PathProcessor\SeoPagerProcessor
     tags:
     - { name: path_processor_inbound, priority: 1000 }
