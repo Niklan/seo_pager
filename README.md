@@ -1,6 +1,6 @@
 # SEO Pager
 
-**What this module do, I think is hack. Especially for page offset. But it exist because some clients want this changes.**
+**What this module does, I think is a hack. Especially for the page offset. It only exist because some clients want these changes.**
 
 What does this module do:
 
@@ -8,7 +8,7 @@ What does this module do:
     - Default: Page 2 = ?page=1
     - Fixed: Page 2 = ?page=2
 - Fixed core pager Url generation which respects Outbound path processors.
-- Removed query arguments from pager links which is not part of url. This means, Views exposed filters and sorts will not present in pager links, if the remain to default values. If the was selected, the will be there.
+- Removed query arguments from pager links which is not part of url. This means, Views exposed filters and sorts will not present in pager links, if they remain to default values. If sort or filters was selected, they will be there.
 - Added Views Display Extender plugin, allows you to enable `rel="prev"` and `rel="next"` meta-tags.
 
 
